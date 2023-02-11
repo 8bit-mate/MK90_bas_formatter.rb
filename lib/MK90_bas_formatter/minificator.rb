@@ -1,42 +1,37 @@
 # frozen_string_literal: true
 
+require_relative "minificator_adder"
+
 #
-# MK90/DEC PDP-11 BASIC code minificator.
+# Elektronika MK90/DEC PDP-11 BASIC minificator.
 #
 class Minificator
   #
-  # Formats array of BASIC statements to an executable BASIC code with numbered lines. Each line stores as many
+  # Format array of BASIC statements to an executable BASIC code with numbered lines. Each line stores as many BASIC
   # statements (operators) as possible. There are no spaces between operators and/or its operands, as BASIC's lexer
   # simply ignores spaces (hence there's no need to store them).
   #
   # These features help to reduce size of the BASIC code.
   #
+  # @param [Array<BasicStatement>] statements
+  #   List of BASIC statements and their properties.
+  #
   # @return [Array] formatted_script
   #   The formatted executable BASIC code.
   #
   def format(statements)
-    puts "formatting.."
+    formatted_script = Array.new(1)
+    formatted_script.extend(MinificatorAdder)
 
-    formatted_script = "placeholder"
-    formatted_script
-  end
+    line_num_step = 1
+    first_line_offset = 1
 
-  private
+    line_args = { line_num_step: line_num_step, first_line_offset: first_line_offset }
 
-  #
-  # Checks if obj is an array.
-  #
-  # @param [Object] obj
-  #   Object to check.
-  #
-  # @raise [TypeError]
-  #
-  def _array?(obj)
-    case obj
-    when Array
-      true
-    else
-      raise(TypeError, "wrong argument type #{obj.class} (expected Array)")
+    statements.each do |e|
+      formatted_script.add_operator(e, line_args)
     end
+
+    formatted_script
   end
 end
