@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require "ostruct"
+require_relative "minificator_position"
 require "logger"
 
 #
@@ -34,25 +34,8 @@ module MinificatorAdder
   # @return [Array<String>] self
   #   The formatted executable BASIC code. Each element is a single numbered line of BASIC code.
   #
-  def add_operator(operator, line_args = {line_num_step: DEF_LINE_STEP, first_line_offset: DEF_LINE_OFFSET})
-    n_arg = operator.args.length
-    n_arg_left = n_arg
-
-    line_num_step = line_args[:line_num_step]
-    first_line_offset = line_args[:first_line_offset]
-
-    index = length - 1
-    index += 1 if operator.require_nl
-
-    i_line = first_line_offset + index * line_num_step
-
-    pos_params = {
-      index: index,                 # current position in the array
-      i_line: i_line,               # current BASIC line number
-      n_arg: n_arg,                 # number of arguments in operator.args
-      n_arg_left: n_arg_left,       # number of arguments left to process
-      line_num_step: line_num_step  # step between two neighbor lines
-    }
+  def add_operator(operator, line_args = { line_num_step: DEF_LINE_STEP, first_line_offset: DEF_LINE_OFFSET })
+    pos_params = MinificatorPosition.new(operator, line_args, length)
 
     if operator.sliceable
       _add_sliceable_operator(operator, pos_params)
@@ -81,9 +64,7 @@ module MinificatorAdder
   #   Current state of the formatted BASIC code.
   #
   def _add_solid_operator(op_obj, pos_params)
-    e = OpenStruct.new(pos_params)
-
-    placeholders_values = { current_line_num: e.i_line }
+    placeholders_values = { current_line_num: pos_params.i_line }
     op_args = _put_placeholders_values(op_obj.args, placeholders_values)
 
     new_operator = op_obj.keyword + op_args.join(op_obj.separator)
@@ -95,16 +76,16 @@ module MinificatorAdder
       logger.warn(msg)
     end
 
-    separator_btw_operators = _check_empty_line(e.index, e.i_line)
+    separator_btw_operators = _choose_separator(pos_params.index)
+    _mark_new_line(pos_params.index, pos_params.i_line)
 
-    tmp_string = self[e.index] + separator_btw_operators + new_operator
+    tmp_string = self[pos_params.index] + separator_btw_operators + new_operator
 
     if tmp_string.length <= MAX_CHARS_PER_LINE
-      self[e.index] = tmp_string
+      self[pos_params.index] = tmp_string
     else
-      e.index = e.index + 1
-      e.i_line = e.i_line + e.line_num_step
-      self[e.index] = e.i_line.to_s + new_operator
+      pos_params.upd_new_line
+      self[pos_params.index] = pos_params.i_line.to_s + new_operator
     end
     self
   end
@@ -129,14 +110,13 @@ module MinificatorAdder
   #   Current state of the formatted BASIC code.
   #
   def _add_sliceable_operator(op_obj, pos_params)
-    e = OpenStruct.new(pos_params)
-
     args_left = op_obj.args
 
     while true
-      separator_btw_operators = _check_empty_line(e.index, e.i_line)
+      separator_btw_operators = _choose_separator(pos_params.index)
+      _mark_new_line(pos_params.index, pos_params.i_line)
 
-      current_line = self[e.index]
+      current_line = self[pos_params.index]
       fit_results = _fit_arguments(current_line, op_obj, separator_btw_operators)
 
       args_fit = fit_results[:args_fit]
@@ -144,13 +124,16 @@ module MinificatorAdder
 
       case args_fit
       when nil
-        # args_fit == nil indicates that no arguments could be added to a current line. In this case it's required to
-        # update the index and start a new BASIC line.
-        e.index += 1
-        e.i_line += e.line_num_step
+        # args_fit == nil indicates that no arguments could be added to a current line - update index and continue to
+        # append arguments on a new line.
+        pos_params.upd_new_line
       else
         # Add statement with arguments that fit into the current BASIC line.
-        self[e.index] = self[e.index] << separator_btw_operators << op_obj.keyword << args_fit.join(op_obj.separator)
+        self[pos_params.index] =
+          self[pos_params.index] <<
+          separator_btw_operators <<
+          op_obj.keyword <<
+          args_fit.join(op_obj.separator)
 
         case args_left
         when []
@@ -158,9 +141,8 @@ module MinificatorAdder
           # done. Break from the loop.
           break
         else
-          # Some arguments are left to be added
-          e.index += 1
-          e.i_line += e.line_num_step
+          # Some arguments are left to be added - update index and continue to append arguments on a new line.
+          pos_params.upd_new_line
         end
       end
     end
@@ -187,7 +169,7 @@ module MinificatorAdder
 
     args = op_obj.args
 
-    lengths_combinations = calc_lengths_combinations(op_obj, separator_btw_operators)
+    lengths_combinations = _calc_lengths_combinations(op_obj, separator_btw_operators)
 
     lengths_combinations_desc = lengths_combinations.sort { |a, b| b <=> a }
 
@@ -204,12 +186,12 @@ module MinificatorAdder
   #
   # 
   #
-  def calc_lengths_combinations(op_obj, separator_btw_operators)
+  def _calc_lengths_combinations(op_obj, separator_btw_operators)
     lengths_combinations = []
 
     op_obj.args.each_with_index do |_e, i|
       array_chunk = op_obj.args.slice(0..i)
-      sep_count = array_chunk.length - 1 # how many separators will apear between operator's arguments
+      sep_count = array_chunk.length - 1 # number of separators that will apear between operator's arguments
 
       # calculate full length of a new BASIC statement:
       full_length =
@@ -227,28 +209,14 @@ module MinificatorAdder
   # Check if a current BASIC line (self[index] element) is empty (nil) or not (initialized), and choose an appropriate
   # separator for a next statement.
   #
-  # If nil: mark a line with a number, and use an 'empty' separator to append a next statement (a separator between
-  # a line number and a statement that follows it is not required).
-  #
-  # Else: use a default separator (a colon).
-  #
   # @param [Integer] index
   #   Current position in the [Array] self.
-  #
-  # @param [Integer] i_line
-  #   Current BASIC line.
   #
   # @return [String]
   #   A chosen separator.
   #
-  def _check_empty_line(index, i_line)
-    case self[index]
-    when nil
-      self[index] = i_line.to_s
-      EMPTY_SEPARATOR
-    else
-      DEF_SEPARATOR
-    end
+  def _choose_separator(index)
+    self[index].nil? ? EMPTY_SEPARATOR : DEF_SEPARATOR
   end
 
   #
@@ -276,5 +244,21 @@ module MinificatorAdder
   #
   def _stringify_hash_elements(hash)
     hash.transform_values!(&:to_s)
+  end
+
+  #
+  # Check if a current BASIC line (self[index] element) is empty (nil). If true, mark new line with a number.
+  #
+  # @param [Integer] index
+  #   Current position in the [Array] self.
+  #
+  # @param [Integer] i_line
+  #   Current BASIC line.
+  #
+  # @return [String]
+  #   A chosen separator.
+  #
+  def _mark_new_line(index, i_line)
+    self[index] = i_line.to_s if self[index].nil?
   end
 end
