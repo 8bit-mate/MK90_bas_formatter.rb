@@ -1,8 +1,6 @@
 # MK90BasFormatter
 
-Welcome to your new gem! In this directory, you'll find the files you need to be able to package up your Ruby library into a gem. Put your Ruby code in the file `lib/MK90_bas_formatter`. To experiment with that code, run `bin/console` for an interactive prompt.
-
-TODO: Delete this and the text above, and describe your gem
+Formats output from the [MK90_bas_img_generator](https://github.com/8bit-mate/MK90_bas_img_generator.rb) gem to a valid executable Elektronika MK90 BASIC code. 
 
 ## Installation
 
@@ -21,8 +19,26 @@ Or install it yourself as:
     $ gem install MK90_bas_formatter
 
 ## Usage
+```ruby
+require "MK90_bas_img_generator"
+require "MK90_bas_formatter"
 
-TODO: Write usage instructions here
+# Generate list of BASIC statements:
+bas_generator = MK90BasImgGenerator.new(
+  generator: generator.new,
+  binary_image: bin_img
+)
+
+statements_arr = bas_generator.generate
+
+# Choose formatter type:
+formatter = Minificator
+
+# Format statements_arr into an executable BASIC script:
+exec_script = MK90BasFormatter.new(statements_arr, formatter.new).format
+
+# Save exec_script to a file, etc...
+```
 
 ## Development
 
@@ -32,7 +48,7 @@ To install this gem onto your local machine, run `bundle exec rake install`. To 
 
 ## Contributing
 
-Bug reports and pull requests are welcome on GitHub at https://github.com/[USERNAME]/MK90_bas_formatter.
+Bug reports and pull requests are welcome on GitHub at https://github.com/8bit-mate/MK90_bas_formatter.rb.
 
 ## License
 
