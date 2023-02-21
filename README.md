@@ -1,6 +1,6 @@
 # MK90BasFormatter
 
-Formats output from the [MK90_bas_img_generator](https://github.com/8bit-mate/MK90_bas_img_generator.rb) gem to a valid executable Elektronika MK90 BASIC code. 
+Formats output from the [MK90_bas_img_generator](https://github.com/8bit-mate/MK90_bas_img_generator.rb) gem to a valid executable Elektronika MK90 BASIC code.
 
 ## Installation
 
