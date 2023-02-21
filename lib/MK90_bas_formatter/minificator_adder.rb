@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 require_relative "minificator_position"
+require_relative "handle_placeholders"
+
 require "logger"
 
 #
@@ -8,13 +10,14 @@ require "logger"
 #
 module MinificatorAdder
   MAX_CHARS_PER_LINE = 80
-  CURRENT_LINE_LBL = "#current_line"
 
   DEF_SEPARATOR = ":"
   EMPTY_SEPARATOR = ""
 
   DEF_LINE_OFFSET = 1
   DEF_LINE_STEP = 1
+
+  include HandlePlaceholders
 
   #
   # Add a BASIC statement (operator) to the script.
@@ -64,8 +67,7 @@ module MinificatorAdder
   #   Current state of the formatted BASIC code.
   #
   def _add_solid_operator(op_obj, pos_params)
-    placeholders_values = { current_line_num: pos_params.i_line }
-    op_args = _put_placeholders_values(op_obj.args, placeholders_values)
+    op_args = handle_placeholders(op_obj, pos_params)
 
     new_operator = op_obj.keyword + op_args.join(op_obj.separator)
 
@@ -151,6 +153,42 @@ module MinificatorAdder
   end
 
   #
+  # Calculate all possible combinations of a current BASIC statement's length.
+  #
+  def _calc_lengths_combinations(op_obj, separator_btw_operators)
+    lengths_combinations = []
+
+    op_obj.args.each_with_index do |_e, i|
+      array_chunk = op_obj.args.slice(0..i)
+      sep_count = array_chunk.length - 1 # number of separators that will apear between operator's arguments
+
+      # calculate full length of a new BASIC statement (with an i-th set of arguments):
+      full_length =
+        op_obj.keyword.length +
+        array_chunk.join("").length +
+        sep_count * op_obj.separator.length +
+        separator_btw_operators.length
+
+      lengths_combinations.append(full_length)
+    end
+    lengths_combinations
+  end
+
+  #
+  # Check if a current BASIC line (self[index] element) is empty (nil) or not (initialized), and choose an appropriate
+  # separator for a next statement.
+  #
+  # @param [Integer] index
+  #   Current position in the [Array] self.
+  #
+  # @return [String]
+  #   A chosen separator.
+  #
+  def _choose_separator(index)
+    self[index].nil? ? EMPTY_SEPARATOR : DEF_SEPARATOR
+  end
+
+  #
   # Return arguments that could be added to a curent BASIC line, and arguments that are left to the next line.
   #
   # @param [Integer] current_line
@@ -181,69 +219,6 @@ module MinificatorAdder
 
     args_fit = args.slice!(0..b_inx)
     { args_fit: args_fit, args_left: args }
-  end
-
-  #
-  # 
-  #
-  def _calc_lengths_combinations(op_obj, separator_btw_operators)
-    lengths_combinations = []
-
-    op_obj.args.each_with_index do |_e, i|
-      array_chunk = op_obj.args.slice(0..i)
-      sep_count = array_chunk.length - 1 # number of separators that will apear between operator's arguments
-
-      # calculate full length of a new BASIC statement:
-      full_length =
-        op_obj.keyword.length +
-        array_chunk.join("").length +
-        sep_count * op_obj.separator.length +
-        separator_btw_operators.length
-
-      lengths_combinations.append(full_length)
-    end
-    lengths_combinations
-  end
-
-  #
-  # Check if a current BASIC line (self[index] element) is empty (nil) or not (initialized), and choose an appropriate
-  # separator for a next statement.
-  #
-  # @param [Integer] index
-  #   Current position in the [Array] self.
-  #
-  # @return [String]
-  #   A chosen separator.
-  #
-  def _choose_separator(index)
-    self[index].nil? ? EMPTY_SEPARATOR : DEF_SEPARATOR
-  end
-
-  #
-  # Replace placeholders with actual values.
-  #
-  # @param [Array] array
-  #   Array those elements should be processed.
-  #
-  # @param [Hash{ Symbol => String }] values
-  #   Actual values to replace placeholders with.
-  #
-  # @output [Array]
-  #
-  def _put_placeholders_values(array, values)
-    _stringify_hash_elements(values)
-    array.map! { |e| e.to_s % values }
-  end
-
-  #
-  # Convert hash values to strings.
-  #
-  # @param [Hash] hash
-  #
-  # @output [Hash]
-  #
-  def _stringify_hash_elements(hash)
-    hash.transform_values!(&:to_s)
   end
 
   #

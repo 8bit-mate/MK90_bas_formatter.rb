@@ -7,7 +7,13 @@ class MinificatorPosition
   attr_accessor :index, :i_line, :n_arg_total, :n_arg_left, :line_num_step
 
   #
-  # Initialize object.
+  # Initialize an instance.
+  #
+  # @param [BasicStatement] operator
+  #
+  # @param [Hash{ Symbol => Integer }] line_args
+  #
+  # @param [Integer] length
   #
   def initialize(operator, line_args, length)
     n_arg = operator.args.length

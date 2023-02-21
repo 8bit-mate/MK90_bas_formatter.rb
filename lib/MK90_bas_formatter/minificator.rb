@@ -19,12 +19,9 @@ class Minificator
   # @return [Array] formatted_script
   #   The formatted executable BASIC code.
   #
-  def format(statements)
+  def format(statements:, line_num_step: 1, first_line_offset: 1)
     formatted_script = Array.new(1)
     formatted_script.extend(MinificatorAdder)
-
-    line_num_step = 1
-    first_line_offset = 1
 
     line_args = { line_num_step: line_num_step, first_line_offset: first_line_offset }
 

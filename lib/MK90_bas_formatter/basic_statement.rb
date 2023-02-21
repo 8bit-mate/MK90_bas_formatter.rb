@@ -1,11 +1,11 @@
 # frozen_string_literal: true
 
 #
-# Class to store BASIC statements (operators).
+# Stores BASIC statements (operators).
 #
 class BasicStatement
   #
-  # Initialize object, use hash keys and values to create and initialize corresponding obj fields.
+  # Initialize an instance, use hash keys-values to create and initialize corresponding object fields.
   #
   # @param [Hash{ Symbol => Object }] hash
   #
