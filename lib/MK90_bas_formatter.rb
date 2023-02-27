@@ -3,32 +3,42 @@
 require_relative "MK90_bas_formatter/version"
 require_relative "MK90_bas_formatter/minificator"
 require_relative "MK90_bas_formatter/basic_statement"
+require_relative "MK90_bas_formatter/constants"
 
 #
-# Provides methods to format output from the MK90_bas_img_generator gem to a valid executable MK90 BASIC code.
+# Formats output from the MK90_bas_img_generator gem to a valid executable MK90 BASIC code.
 #
 class MK90BasFormatter
   attr_reader :statements, :formatter
 
+  include Constants
+
+  #
+  # Initialize a MK90BasFormatter instance.
   #
   # @param [Array< Hash{ Symbol => Object }>] statements
   #   List of BASIC statements and their properties.
   #
-  # @param [Symbol] formatter (Minificator)
-  #   Formatter method name.
+  # @param [Object] formatter (Minificator)
+  #   Formatter instance.
   #
-  def initialize(statements:, formatter: Minificator, **kwargs)
+  # @option [Integer] line_step (Constants::DEF_LINE_STEP)
+  #   Step between two neighbor BASIC line numbers.
+  #
+  # @option [Integer] line_offset (Constants::DEF_LINE_OFFSET)
+  #   The offset to start the first line at.
+  #
+  def initialize(
+    statements:,
+    formatter: Minificator.new,
+    line_step: DEF_LINE_STEP,
+    line_offset: DEF_LINE_OFFSET,
+    **
+  )
     @statements = statements
     @formatter = formatter
-
-    @line_num_step = 1
-    @first_line_offset = 1
-
-    if kwargs[:line_num_step]
-      @line_num_step = kwargs[:line_num_step]
-    elsif kwargs[:first_line_offset]
-      @first_line_offset = kwargs[:first_line_offset]
-    end
+    @line_step = line_step
+    @line_offset = line_offset
   end
 
   #
@@ -38,8 +48,8 @@ class MK90BasFormatter
     statements = _array_of_hash_to_bs(@statements)
     formatter.format(
       statements: statements,
-      line_num_step: @line_num_step,
-      first_line_offset: @first_line_offset
+      line_step: @line_step,
+      line_offset: @line_offset
     )
   end
 

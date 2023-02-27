@@ -2,6 +2,7 @@
 
 require_relative "minificator_position"
 require_relative "handle_placeholders"
+require_relative "constants"
 
 require "logger"
 
@@ -9,15 +10,8 @@ require "logger"
 # MK90 BASIC code minificator.
 #
 module MinificatorAdder
-  MAX_CHARS_PER_LINE = 80
-
-  DEF_SEPARATOR = ":"
-  EMPTY_SEPARATOR = ""
-
-  DEF_LINE_OFFSET = 1
-  DEF_LINE_STEP = 1
-
   include HandlePlaceholders
+  include Constants
 
   #
   # Add a BASIC statement (operator) to the script.
@@ -28,16 +22,16 @@ module MinificatorAdder
   # @param [Hash{ Symbol => Object }] line_args
   #   Line numbers options.
   #
-  # @option line_args [Integer] :line_num_step (DEF_LINE_STEP)
-  #   Step between two neighbor lines.
+  # @option line_args [Integer] :line_step (Constants::DEF_LINE_STEP)
+  #   Step between two neighbor BASIC line numbers.
   #
-  # @option line_args [Integer] :first_line_offset (DEF_LINE_OFFSET)
+  # @option line_args [Integer] :line_offset (Constants::DEF_LINE_OFFSET)
   #   The offset to start the first line at.
   #
   # @return [Array<String>] self
   #   The formatted executable BASIC code. Each element is a single numbered line of BASIC code.
   #
-  def add_operator(operator, line_args = { line_num_step: DEF_LINE_STEP, first_line_offset: DEF_LINE_OFFSET })
+  def add_operator(operator, line_args = { line_step: DEF_LINE_STEP, line_offset: DEF_LINE_OFFSET })
     pos_params = MinificatorPosition.new(operator, line_args, length)
 
     if operator.sliceable
@@ -155,6 +149,12 @@ module MinificatorAdder
   #
   # Calculate all possible combinations of a current BASIC statement's length.
   #
+  # @param [Hash{ Symbol => Integer }] pos_params
+  #   Positions in the arrays and BASIC code.
+  #
+  # @param [String] separator_btw_operators0
+  #   Separator between_operators.
+  #
   def _calc_lengths_combinations(op_obj, separator_btw_operators)
     lengths_combinations = []
 
@@ -162,16 +162,45 @@ module MinificatorAdder
       array_chunk = op_obj.args.slice(0..i)
       sep_count = array_chunk.length - 1 # number of separators that will apear between operator's arguments
 
-      # calculate full length of a new BASIC statement (with an i-th set of arguments):
-      full_length =
-        op_obj.keyword.length +
-        array_chunk.join("").length +
-        sep_count * op_obj.separator.length +
-        separator_btw_operators.length
-
-      lengths_combinations.append(full_length)
+      statement_full_length = _calc_statement_length(
+        keyword_length: op_obj.keyword.length,
+        current_args_length: array_chunk.join("").length,
+        args_sep_count: sep_count,
+        args_sep_length: op_obj.separator.length,
+        statement_sep_length: separator_btw_operators.length
+      )
+      
+      lengths_combinations.append(statement_full_length)
     end
     lengths_combinations
+  end
+
+  #
+  # Calculate total length of a new BASIC statement (with an i-th set of arguments).
+  #
+  # @param [Integer] keyword_length
+  #   Length of the statement keyword.
+  #
+  # @param [Integer] current_args_length
+  #   Sum of lengths of arguments on a current iteration.
+  #
+  # @param [Integer] args_sep_count
+  #   Number of separators that will apear between operator's arguments.
+  #
+  # @param [Integer] args_sep_length
+  #   Legth of the separator between operator's arguments.
+  #
+  # @param [Integer] statement_sep_length
+  #   Legth of the separator between statements.
+  #
+  def _calc_statement_length(
+    keyword_length:,
+    current_args_length:,
+    args_sep_count:,
+    args_sep_length:,
+    statement_sep_length:
+  )
+    keyword_length + current_args_length + args_sep_count * args_sep_length + statement_sep_length
   end
 
   #
