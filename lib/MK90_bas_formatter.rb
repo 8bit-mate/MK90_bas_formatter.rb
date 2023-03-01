@@ -19,7 +19,7 @@ class MK90BasFormatter
   # @param [Array< Hash{ Symbol => Object }>] statements
   #   List of BASIC statements and their properties.
   #
-  # @param [Object] formatter (Minificator)
+  # @param [Object] formatter (Minificator.new)
   #   Formatter instance.
   #
   # @option [Integer] line_step (Constants::DEF_LINE_STEP)

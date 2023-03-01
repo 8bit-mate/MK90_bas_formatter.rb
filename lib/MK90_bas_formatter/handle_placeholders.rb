@@ -4,20 +4,20 @@ require "quecto_calc"
 
 #
 # A two-step generation is used to generate an executable BASIC script: first the 'MK90_bas_img_generator' is used to
-# generate list of BASIC statements; then 'MK90_bas_formatter' is used to format list of statements into valid numbered
-# BASIC lines. That means that during the first step BASIC lines numbers are undefined yet, but they still might appear
-# in statements like N GOTO N, where N is the current line number. Only during the 2nd step (while formatting statements
-# into a BASIC script) the calculation of the N number becomes possible.
+# generate list of BASIC statement tokens; then 'MK90_bas_formatter' is used to format list of tokens into valid
+# numbered BASIC lines. That means that during the first step BASIC lines numbers are undefined yet, but they still
+# might appear in statements like N GOTO N, where N is the current line number. Only during the 2nd step (while
+# formatting statements into a BASIC script) the calculation of the N number becomes possible.
 #
 # To handle this 'MK90_bas_img_generator' uses placeholders, and the task here is to find these placeholders and replace
 # them with the actual values.
 #
-# Placeholders also could be used with a simple expressions like: N GOTO N + m (jump to a line that is m lines away from
+# Placeholders also could be used with a simple expressions like: N GOTO N + M (jump to a line that is M lines away from
 # the current one). This expressions should be evaluated before placed in the actual script.
 #
 # To do so it is required to search for a string that starts with a 'magick' character 'PLACEHOLDER_CHAR'. Then the
 # string should be parsed to find out if it actually has a placeholder (and optionally an expression associated with
-# it). If a placeholder found: replace placeholder with the actual value.
+# it). If a placeholder found: evaluate its expression to replace placeholder with the actual value.
 #
 module HandlePlaceholders
   PLACEHOLDER_CHAR = "%"
@@ -28,7 +28,9 @@ module HandlePlaceholders
   #
   # @param [MinificatorPosition] pos_params
   #
-  # @return [Array]
+  # @return [Array<Object>]
+  #   An array, mapped to the 'op_obj.args' array. All elements with placeholders are evaluated (if possible), all
+  #   other elements are the same as in the original 'op_obj.args' array.
   #
   def handle_placeholders(op_obj, pos_params)
     op_obj.args.map do |arg|

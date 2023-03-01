@@ -7,17 +7,17 @@ require_relative "constants"
 require "logger"
 
 #
-# MK90 BASIC code minificator.
+# Set of methods to add a BASIC statement to the BASIC script.
 #
 module MinificatorAdder
   include HandlePlaceholders
   include Constants
 
   #
-  # Add a BASIC statement (operator) to the script.
+  # Add a BASIC statement (operator) to the BASIC script.
   #
   # @param [BasicStatement] operator
-  #   An operator to be added to the BASIC code.
+  #   An operator to be added to the BASIC script.
   #
   # @param [Hash{ Symbol => Object }] line_args
   #   Line numbers options.
@@ -29,7 +29,7 @@ module MinificatorAdder
   #   The offset to start the first line at.
   #
   # @return [Array<String>] self
-  #   The formatted executable BASIC code. Each element is a single numbered line of BASIC code.
+  #   The formatted executable BASIC script. Each element is a single numbered line of BASIC code.
   #
   def add_operator(operator, line_args = { line_step: DEF_LINE_STEP, line_offset: DEF_LINE_OFFSET })
     pos_params = MinificatorPosition.new(operator, line_args, length)
@@ -228,10 +228,10 @@ module MinificatorAdder
   #
   # @return [Hash{ Symbol => Array }]
   #   :args_fit - arguments that could be added to a current BASIC line;
-  #   :args_left - arguments left.
+  #   :args_left - arguments left to be processed.
   #
   def _fit_arguments(current_line, op_obj, separator_btw_operators)
-    # calculate free space left in a current BASIC line:
+    # Calculate free space left in a current BASIC line:
     free_space = MAX_CHARS_PER_LINE - current_line.length
 
     args = op_obj.args

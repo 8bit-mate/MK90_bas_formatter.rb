@@ -24,7 +24,7 @@ class Minificator
   # @param [Integer] line_offset
   #   The offset to start the first line at.
   #
-  # @return [Array] formatted_script
+  # @return [Array<String>] formatted_script
   #   The formatted executable BASIC code.
   #
   def format(statements:, line_step:, line_offset:)
